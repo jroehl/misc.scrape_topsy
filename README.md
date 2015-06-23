@@ -22,6 +22,9 @@ This README documents whatever steps are necessary to get your application up an
       beautifulsoup (pip3 install beautifulsoup4)
       selenium	(pip3 install selenium)
 
+* Installation of Firefox required:
+      tested with vers. 38.0.5
+
 * "Scrape Topsy URL.workflow" has to be installed (and updated) manually as service for mac
 
 * "~/.bash_profile" exists:
