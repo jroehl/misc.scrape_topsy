@@ -165,7 +165,10 @@ def browse_twitter(browser, result, count):
     try:
         tweet = browser.find_element_by_xpath("//*[@id='results']/div[{0}]/div/div/ul/li[1]/small/a/span[2]" .format(count))
     except:
-        return [-1, -1]
+        try:
+            tweet = browser.find_element_by_xpath("//*[@id='results']/div[{0}]/div/div/ul/li[1]/small/a/span[2]" .format(count+1))
+        except:
+            return [-1, -1]
 
     action = ActionChains(browser)
     action.key_down(Keys.COMMAND)
