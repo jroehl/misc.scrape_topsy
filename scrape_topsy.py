@@ -203,12 +203,12 @@ def browse_twitter(browser, result, count):
     try:
         retweet_count = re.search('(?<=<strong>)\d+', str(retweet_count)).group()
     except:
-        favorite_count = -1
+        retweet_count = -1
     favorite_count = soup.find_all(class_="request-favorited-popup")
     try:
         favorite_count = re.search('(?<=<strong>)\d+', str(favorite_count)).group()
     except:
-        retweet_count = -1
+        favorite_count = -1
 
     browser.find_element_by_tag_name('body').send_keys(Keys.COMMAND + 'w')
 
