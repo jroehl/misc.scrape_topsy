@@ -67,7 +67,7 @@ def scrape(arg):
             if page_has_loaded(browser, xpath):
                 break
 
-        next_btn = browser.find_element_by_xpath()
+        next_btn = browser.find_element_by_xpath(xpath)
         next_btn.click()
 
     header = ["Coordinates",
