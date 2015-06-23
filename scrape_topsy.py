@@ -57,11 +57,17 @@ def scrape(arg):
 
         set = scrape_topsy(browser, set)
         count = set["count"]
-        try:
-            next_btn = browser.find_element_by_xpath("//*[@id='module-pager']/div/ul/li[12]/a")
-        except Exception as e:
-            log("Not a topsy URL specified:\n{0}" .format(e))
-            sys.exit(0)
+        xpath = "//*[@id='module-pager']/div/ul/li[12]/a"
+        for count in range(3):
+            if not page_has_loaded(browser, xpath):
+                if count == 2:
+                    log("{0}\nNot a topsy URL specified:\n{1}" .format(arg, e))
+                    sys.exit(0)
+                browser.refresh()
+            if page_has_loaded(browser, xpath):
+                break
+
+        next_btn = browser.find_element_by_xpath()
         next_btn.click()
 
     header = ["Coordinates",
@@ -146,10 +152,10 @@ def scrape_topsy(browser, set):
     return set
 
 
-def page_has_loaded(browser):
+def page_has_loaded(browser, xpath):
         try:
             time.sleep(0.5)
-            browser.find_element_by_xpath("//*[@id='doc']")
+            browser.find_element_by_xpath(xpath)
             return True
         except:
             return False
@@ -184,7 +190,7 @@ def browse_twitter(browser, result, count):
     # )
 
     for count in range(3):
-        if not page_has_loaded(browser):
+        if not page_has_loaded(browser, "//*[@id='doc']"):
             if count == 2:
                 browser.find_element_by_tag_name('body').send_keys(Keys.COMMAND + 'w')
                 browser.switch_to_window(main_window)
@@ -243,7 +249,7 @@ def write_to_CSV(name, lists):
 
 def log(output):
     with open("{0}/temp.log" .format(os.getcwd()), "a") as log:
-        log.write(output)
+        log.write("{0}\n" .format(output))
 
 
 def mk_dir(dirname):
