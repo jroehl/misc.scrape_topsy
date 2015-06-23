@@ -58,9 +58,9 @@ def scrape(arg):
         set = scrape_topsy(browser, set)
         count = set["count"]
         xpath = "//*[@id='module-pager']/div/ul/li[12]/a"
-        for count in range(3):
+        for counter in range(3):
             if not page_has_loaded(browser, xpath):
-                if count == 2:
+                if counter == 2:
                     log("{0}\nNot a topsy URL specified:\n{1}" .format(arg, e))
                     sys.exit(0)
                 browser.refresh()
@@ -104,7 +104,7 @@ def scrape(arg):
 
     browser.quit()
 
-    log("{0} tweets scraped and saved to {1}.csv.." .format(count, name))
+    log("{0} tweets scraped and saved to {1}.csv.." .format(count+1, name))
 
 
 def scrape_topsy(browser, set):
@@ -163,9 +163,12 @@ def page_has_loaded(browser, xpath):
 
 def browse_twitter(browser, result, count):
 
-    browser.find_element_by_tag_name('a')
+    try:
+        main_window = browser.current_window_handle
+    except Exception as e:
+        log("{0} current_window_handle" .format(e))
+        return [-1, -1]
 
-    main_window = browser.current_window_handle
     if count >= 6:
         count += 1
     try:
@@ -189,9 +192,10 @@ def browse_twitter(browser, result, count):
     #     EC.presence_of_element_located((By.XPATH, "//*[@id='doc']"))
     # )
 
-    for count in range(3):
+    for counter in range(3):
         if not page_has_loaded(browser, "//*[@id='doc']"):
-            if count == 2:
+            if counter == 2:
+                # header = browser.find_element_by_xpath("/html/body/div[2]/div/h1").text
                 browser.find_element_by_tag_name('body').send_keys(Keys.COMMAND + 'w')
                 browser.switch_to_window(main_window)
                 return [-1, -1]
