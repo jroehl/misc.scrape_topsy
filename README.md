@@ -28,17 +28,17 @@ This README documents whatever steps are necessary to get your application up an
 * "Scrape Topsy URL.workflow" has to be installed (and updated) manually as service for mac
 
 * "~/.bash_profile" exists:
-      check with:
-      "nano ~/.bash_profile" and/or "echo $PATH"
-      ($PATH has variables for python and shell/bash set)
+      - check with:
+      - "nano ~/.bash_profile" and/or "echo $PATH"
+      - ($PATH has variables for python and shell/bash set)
 
-      at least following entry exists:
+      - at least following entry exists:
             # Setting PATH for Python 3.4
             # The orginal version is saved in .bash_profile.pysave
             PATH="/Library/Frameworks/Python.framework/Versions/3.4/bin:${PATH}"
             export PATH
             
-            # maybe the entry has to be altered for python3.4 path on current machine
+      - maybe the entry has to be altered for python3.4 path on current machine
 
 * script creates folder (if not exists) "/Users/USERNAME/Desktop/temp_csv/" where the csv file (name=twitter_name) will be put
 
