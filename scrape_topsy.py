@@ -162,7 +162,10 @@ def browse_twitter(browser, result, count):
     main_window = browser.current_window_handle
     if count >= 6:
         count += 1
-    tweet = browser.find_element_by_xpath("//*[@id='results']/div[{0}]/div/div/ul/li[1]/small/a/span[2]" .format(count))
+    try:
+        tweet = browser.find_element_by_xpath("//*[@id='results']/div[{0}]/div/div/ul/li[1]/small/a/span[2]" .format(count))
+    except:
+        return [-1, -1]
 
     action = ActionChains(browser)
     action.key_down(Keys.COMMAND)
@@ -182,15 +185,21 @@ def browse_twitter(browser, result, count):
             if count == 2:
                 browser.find_element_by_tag_name('body').send_keys(Keys.COMMAND + 'w')
                 browser.switch_to_window(main_window)
-                return [0, 0]
+                return [-1, -1]
             browser.refresh()
 
     html_source = browser.page_source
     soup = BeautifulSoup(html_source)
     retweet_count = soup.find_all(class_="request-retweeted-popup")
-    retweet_count = re.search('(?<=<strong>)\d+', str(retweet_count)).group()
+    try:
+        retweet_count = re.search('(?<=<strong>)\d+', str(retweet_count)).group()
+    except:
+        favorite_count = -1
     favorite_count = soup.find_all(class_="request-favorited-popup")
-    favorite_count = re.search('(?<=<strong>)\d+', str(favorite_count)).group()
+    try:
+        favorite_count = re.search('(?<=<strong>)\d+', str(favorite_count)).group()
+    except:
+        retweet_count = -1
 
     browser.find_element_by_tag_name('body').send_keys(Keys.COMMAND + 'w')
 
