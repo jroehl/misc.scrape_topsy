@@ -2,6 +2,10 @@
 
 This README documents whatever steps are necessary to get your application up and running.
 
+### run script ###
+
+* start the script by right clicking link and selecting service in browser (preferably NOT firefox)
+
 ### What is this repository for? ###
 
 * Script for scraping topsy tweets
@@ -10,6 +14,8 @@ This README documents whatever steps are necessary to get your application up an
       - opens for every tweet the twitter page of tweet and tries to get retweet and favorite count
       - works through following pages until end of results is reached
       - saves tweets to twittername.csv in /Users/username/desktop/temp_csv
+
+     
 
 * 2015/06/23 Version 0.1
 
