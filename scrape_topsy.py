@@ -79,6 +79,8 @@ def scrape(arg):
         next_btn = browser.find_element_by_xpath(xpath)
         next_btn.click()
 
+    dic["tweet_id"] = list(dic["tweet_id"])
+
     header = ["Coordinates",
               "CreatedAt",
               "FavoriteCount",
