@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import pprint
+
 import re
 import csv
 import sys
@@ -7,12 +9,8 @@ import os
 import time
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver import ActionChains
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
 
 
 def new_set():
@@ -55,25 +53,29 @@ def scrape(arg):
            "favorite_count": [],
              # 8
            "text": [],
-           "count": count
+           "count": count,
+           "errors": {"count": 0, "text": []}
            }
 
-    while count % 10 == 0:
+    old_len = -1
+    new_len = 1
+    # while count % 10 == 0:
+    while old_len != new_len:
         old_len = len(dic["tweet_id"])
         new_dic = scrape_topsy(browser, dic)
         new_len = len(new_dic["tweet_id"])
-        if old_len == new_len:
-            break
+        # if old_len == new_len:
+        #     break
         dic = new_dic
         count = dic["count"]
         xpath = "//*[@id='module-pager']/div/ul/li[12]/a"
         for counter in range(3):
             if not page_has_loaded(browser, xpath):
                 if counter == 2:
-                    log("{0}\nNot a topsy URL specified:\n{1}" .format(arg, e))
+                    log("\"{1}\" - is not a topsy URL" .format(time.ctime(), arg, e))
                     sys.exit(0)
                 browser.refresh()
-            if page_has_loaded(browser, xpath):
+            else:
                 break
 
         next_btn = browser.find_element_by_xpath(xpath)
@@ -107,7 +109,11 @@ def scrape(arg):
 
     dic["twitter_id"] = [result for item in dic["twitter_id"]]
 
+    errorcount = dic["errors"]["count"]
+    errortexts = dic["errors"]["text"]
+
     del dic["count"]
+    del dic["errors"]
     for count in range(len(dic["tweet_id"])):
         write_list.append([dic[key][count] for key in sorted(dic)])
 
@@ -115,7 +121,13 @@ def scrape(arg):
 
     browser.quit()
 
-    log("{0} tweets scraped and saved to {1}.csv.." .format(count+1, name))
+    if errorcount == 0:
+        log("{0}\n{1} tweets scraped and saved to {2}.csv.." .format(time.ctime(), count+1, name))
+    elif errorcount > 0:
+        log("{0}\n{1} tweets scraped with errors and saved to {2}.csv.." .format(time.ctime(), count+1, name))
+        errorlog("{0}\n{1} errors on following results:" .format(time.ctime(), errorcount))
+        for errortext in errortexts:
+            errorlog("\n{0}\n" .format(errortext))
 
 
 def scrape_topsy(browser, set):
@@ -127,38 +139,45 @@ def scrape_topsy(browser, set):
 
     count = 0
     for result in results:
-        count += 1
+        try:
+            count += 1
 
-        text = result.find("div")
-        text = tweet_regex(str(text))
+            text = result.find("div")
+            text = tweet_regex(str(text))
 
-        twitter_id = result.find("a")
-        twitter_id = re.search('(?<=twitter.com/).*?(")', str(twitter_id)).group()
-        twitter_id = twitter_id.replace("\"", "")
+            twitter_id = result.find("a")
+            twitter_id = re.search('(?<=twitter.com/).*?(")', str(twitter_id)).group()
+            twitter_id = twitter_id.replace("\"", "")
 
-        muted = result.find_all("a", class_="muted")
+            muted = result.find_all("a", class_="muted")
+            try:
+                rep_to = re.search('(?<=status/)\d+', str(muted)).group()
+            except:
+                rep_to = 0
 
-        rep_to = re.search('(?<=status/)\d+', str(muted)).group()
+            tweet_id = re.search('(?<=status/)\d+', str(muted)).group()
 
-        tweet_id = re.search('(?<=status/)\d+', str(muted)).group()
+            created_at = re.search('(?<=timestamp=")\d+', str(muted)).group()
+            created_at = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(created_at)))
 
-        created_at = re.search('(?<=timestamp=")\d+', str(muted)).group()
-        created_at = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(created_at)))
+            # counts = browse_twitter(browser, result, count)
+            counts = [-1, -1]
 
-        counts = browse_twitter(browser, result, count)
-
-        set["tweet_id"].add(tweet_id)
-        set["twitter_id"].append(twitter_id)
-        set["created_at"].append(created_at)
-        set["language"].append(None)
-        set["truncated"].append(False)
-        set["source"].append(None)
-        set["coordinates"].append(None)
-        set["reply_user_id"].append(rep_to)
-        set["retweet_count"].append(counts[0])
-        set["favorite_count"].append(counts[1])
-        set["text"].append(text)
-        set["count"] = count
+            set["tweet_id"].add(tweet_id)
+            set["twitter_id"].append(twitter_id)
+            set["created_at"].append(created_at)
+            set["language"].append(None)
+            set["truncated"].append(False)
+            set["source"].append(None)
+            set["coordinates"].append(None)
+            set["reply_user_id"].append(rep_to)
+            set["retweet_count"].append(counts[0])
+            set["favorite_count"].append(counts[1])
+            set["text"].append(text)
+            set["count"] = count
+        except:
+            set["errors"]["count"] += 1
+            set["errors"]["text"].append(result)
 
     return set
 
@@ -177,7 +196,7 @@ def browse_twitter(browser, result, count):
     try:
         main_window = browser.current_window_handle
     except Exception as e:
-        log("{0} current_window_handle" .format(e))
+        log("\n{0} current_window_handle" .format(e))
         return [-1, -1]
 
     if count >= 6:
@@ -265,6 +284,10 @@ def write_to_CSV(name, lists):
 
 def log(output):
     with open("{0}/temp.log" .format(os.getcwd()), "a") as log:
+        log.write("{0}\n" .format(output))
+
+def errorlog(output):
+    with open("{0}/error.log" .format(os.getcwd()), "a") as log:
         log.write("{0}\n" .format(output))
 
 
