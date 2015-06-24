@@ -233,7 +233,8 @@ def browse_twitter(browser, result, count):
 
 
 def tweet_regex(string):
-    tweet = re.sub('<div>', '', string)
+    tweet = re.sub('http://.*?(==.jsp)', '', string)
+    tweet = re.sub('<div>', '', tweet)
     tweet = re.sub('</div>', '', tweet)
     tweet = re.sub('<a data-hashtag=', ' ', tweet)
     tweet = re.sub('<a data-username=', ' ', tweet)
