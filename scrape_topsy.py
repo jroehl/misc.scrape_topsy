@@ -15,6 +15,11 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 
 
+def new_set():
+    var = set()
+    return var
+
+
 def scrape(arg):
 
     # return arg
@@ -28,8 +33,8 @@ def scrape(arg):
     browser.get("{0}" .format(arg))
     # browser.get('http://topsy.com/s?q=from%3ALOTR&mintime=1388617248')
     count = 0
-    set = {  # 10
-           "tweet_id": [],
+    dic = {  # 10
+           "tweet_id": new_set(),
              # 11
            "twitter_id": [],
              # 2
@@ -54,9 +59,13 @@ def scrape(arg):
            }
 
     while count % 10 == 0:
-
-        set = scrape_topsy(browser, set)
-        count = set["count"]
+        old_len = len(dic["tweet_id"])
+        new_dic = scrape_topsy(browser, dic)
+        new_len = len(new_dic["tweet_id"])
+        if old_len == new_len:
+            break
+        dic = new_dic
+        count = dic["count"]
         xpath = "//*[@id='module-pager']/div/ul/li[12]/a"
         for counter in range(3):
             if not page_has_loaded(browser, xpath):
@@ -87,18 +96,18 @@ def scrape(arg):
     write_list.append(header)
 
     browser.get("http://gettwitterid.com/")
-    name = set["twitter_id"][0]
+    name = dic["twitter_id"][0]
     search_bar = browser.find_element_by_xpath("//*[@id='search_bar']")
     search_bar.send_keys(name)
     search_bar.send_keys(Keys.RETURN)
 
     result = browser.find_element_by_xpath("/html/body/div/div[1]/table/tbody/tr[1]/td[2]/p").text
 
-    set["twitter_id"] = [result for item in set["twitter_id"]]
+    dic["twitter_id"] = [result for item in dic["twitter_id"]]
 
-    del set["count"]
-    for count in range(len(set["tweet_id"])):
-        write_list.append([set[key][count] for key in sorted(set)])
+    del dic["count"]
+    for count in range(len(dic["tweet_id"])):
+        write_list.append([dic[key][count] for key in sorted(dic)])
 
     write_to_CSV(name, write_list)
 
@@ -136,7 +145,7 @@ def scrape_topsy(browser, set):
 
         counts = browse_twitter(browser, result, count)
 
-        set["tweet_id"].append(tweet_id)
+        set["tweet_id"].add(tweet_id)
         set["twitter_id"].append(twitter_id)
         set["created_at"].append(created_at)
         set["language"].append(None)
