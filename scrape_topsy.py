@@ -40,10 +40,7 @@ def scrape(arg):
     # navigate to page
     browser.get("{0}" .format(arg))
 
-    # grabbed tweet count
-    count = 0
-    # dictionary for storing the details and script data
-
+    # list for tweets
     tweets = []
 
     # header for the csv file
@@ -63,27 +60,16 @@ def scrape(arg):
     # headerrow is appended as first entry
     tweets.append(header)
 
+    # dictionary for storing the tweet list and errortexts
     collection = {"tweets": tweets,
-                  "count": count,
-                  "errors": {"count": 0, "text": []}}
+                  "error_text": []}
     # the length of the "tweet_id" set (unique) of the previous run is stored in old_len for comparison with the new_len
-    old_len = 10
-    new_len = 0
+    old_url = arg
+    new_url = ""
     # if the lenghts of the sets are equal, no new data has been obtained
-    while old_len != new_len:
+    while old_url != new_url:
 
-        old_len = len(collection["tweets"])
-        new_collection = scrape_topsy(browser, collection)
-        new_len = len(new_collection["tweets"])
-        print(old_len, new_len)
-        # break out of while loop to avoid duplicates
-        if old_len == new_len:
-            break
-
-        # if new results are found result is stored in the main dictionary
-        collection = new_collection
-
-        count = collection["count"]
+        collection = scrape_topsy(browser, collection)
 
         # Try to find the "next" button on topsy page for navigation
         xpath = "//*[@id='module-pager']/div/ul/li[12]/a"
@@ -99,11 +85,18 @@ def scrape(arg):
             else:
                 break
 
+        # store current (old) url for comparison with next page
+        old_url = browser.current_url
+
         # next button is located and clicked for new result page
         next_btn = browser.find_element_by_xpath(xpath)
         next_btn.click()
 
+        # TODO implement wait on page load
         time.sleep(2)
+
+        # store current (new) url for comparison with previous page
+        new_url = browser.current_url
 
     # navigate to URL to obtain the twitterID by the twitterName
     browser.get("http://gettwitterid.com/")
@@ -119,8 +112,8 @@ def scrape(arg):
             entry[1] = real_id
 
     # save the errorcount and errortexts in temp variables
-    errorcount = collection["errors"]["count"]
-    errortexts = collection["errors"]["text"]
+    errorcount = len(collection["error_text"])
+    errortexts = collection["error_text"]
 
     # output as csv
     write_to_CSV(name, collection["tweets"])
@@ -128,11 +121,14 @@ def scrape(arg):
     # close the current firefox driver instance
     browser.quit()
 
+    # get entry count (-1 == header)
+    tweet_count = len(collection["tweets"])-1
+
     # write logs for output through applescript notification
     if errorcount == 0:
-        log("{0}\n{1} tweets scraped and saved to {2}.csv.." .format(time.ctime(), count+1, name))
+        log("{0}\n{1} tweets scraped and saved to {2}.csv.." .format(time.ctime(), tweet_count, name))
     elif errorcount > 0:
-        log("{0}\n{1} tweets scraped with errors and saved to {2}.csv.." .format(time.ctime(), count+1, name))
+        log("{0}\n{1} tweets scraped with errors and saved to {2}.csv.." .format(time.ctime(), tweet_count, name))
         errorlog("{0}\n{1} errors on following results:" .format(time.ctime(), errorcount))
         for errortext in errortexts:
             errorlog("\n{0}\n" .format(errortext))
@@ -146,9 +142,8 @@ def scrape_topsy(browser, collection):
     # BeautifulSoup find only the media body tag
     soup = BeautifulSoup(html_source)
     results = soup.find_all("div", class_="result-tweet")
-    count = 0
+
     for result in results:
-        count += 1
         try:
 
             # navigate to right div and get_text()
@@ -176,6 +171,7 @@ def scrape_topsy(browser, collection):
 
             # counts = browse_twitter(browser, result, count)
             counts = [-1, -1]
+
             # save results to the dictionary, append None, or default values if not found
             tweet = [tweet_id, twitter_id, created_at, None, False, None, None, rep_to, counts[0], counts[1], text]
 
@@ -185,13 +181,10 @@ def scrape_topsy(browser, collection):
 
             collection["tweets"].append(tweet)
 
-        # catch exception of run, store errorcount increment and resulttext in dictionary["errors"]
-        except Exception as e:
-            print(e)
-            collection["errors"]["count"] += 1
-            collection["errors"]["text"].append("\n{0}\n{1}" .format(result, tweet))
+        # catch exception of run, store resulttext in dictionary["error_text"]
+        except Exception:
+            collection["error_text"].append("\n{0}\n\n{1}" .format(result, tweet))
 
-    collection["count"] = count
     return collection
 
 
