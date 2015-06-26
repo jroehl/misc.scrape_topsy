@@ -43,51 +43,47 @@ def scrape(arg):
     # grabbed tweet count
     count = 0
     # dictionary for storing the details and script data
-    dic = {  # 10
-           "tweet_id": new_set(),
-             # 11
-           "twitter_id": [],
-             # 2
-           "created_at": [],
-             # 4
-           "language": [],
-             # 9
-           "truncated": [],
-             # 7
-           "source": [],
-             # 1
-           "coordinates": [],
-             # 5
-           "reply_user_id": [],
-             # 6
-           "retweet_count": [],
-             # 3
-           "favorite_count": [],
-             # 8
-           "text": [],
-             # 9
-           "count": count,
-             # 10
-           "errors": {"count": 0, "text": []}
-           }
 
+    tweets = []
+
+    # header for the csv file
+    header = ["TweetID",
+              "TwitterID",
+              "CreatedAt",
+              "Language",
+              "Truncated",
+              "Source",
+              "Coordinates",
+              "RepUserID",
+              "RetweetCount",
+              "FavoriteCount",
+              "Text",
+              ]
+
+    # headerrow is appended as first entry
+    tweets.append(header)
+
+    collection = {"tweets": tweets,
+                  "count": count,
+                  "errors": {"count": 0, "text": []}}
     # the length of the "tweet_id" set (unique) of the previous run is stored in old_len for comparison with the new_len
-    old_len = -1
-    new_len = 1
+    old_len = 10
+    new_len = 0
     # if the lenghts of the sets are equal, no new data has been obtained
     while old_len != new_len:
 
-        old_len = len(dic["tweet_id"])
-        new_dic = scrape_topsy(browser, dic)
-        new_len = len(new_dic["tweet_id"])
+        old_len = len(collection["tweets"])
+        new_collection = scrape_topsy(browser, collection)
+        new_len = len(new_collection["tweets"])
+        print(old_len, new_len)
         # break out of while loop to avoid duplicates
         if old_len == new_len:
             break
 
         # if new results are found result is stored in the main dictionary
-        dic = new_dic
+        collection = new_collection
 
-        count = dic["count"]
+        count = collection["count"]
 
         # Try to find the "next" button on topsy page for navigation
         xpath = "//*[@id='module-pager']/div/ul/li[12]/a"
@@ -107,53 +103,27 @@ def scrape(arg):
         next_btn = browser.find_element_by_xpath(xpath)
         next_btn.click()
 
-    # set is converted to list for next steps
-    dic["tweet_id"] = list(dic["tweet_id"])
-
-    # header for the csv file
-    header = ["Coordinates",
-              "CreatedAt",
-              "FavoriteCount",
-              "Language",
-              "RepUserID",
-              "RetweetCount",
-              "Source",
-              "Text",
-              "Truncated",
-              "TweetID",
-              "TwitterID"
-              ]
-
-    # new write_list is created for the write_to_CSV() method
-    write_list = []
-    # headerrow is appended as first entry
-    write_list.append(header)
+        time.sleep(2)
 
     # navigate to URL to obtain the twitterID by the twitterName
     browser.get("http://gettwitterid.com/")
-    name = dic["twitter_id"][0]
+    name = collection["tweets"][1][1]
     search_bar = browser.find_element_by_xpath("//*[@id='search_bar']")
     search_bar.send_keys(name)
     search_bar.send_keys(Keys.RETURN)
-    result = browser.find_element_by_xpath("/html/body/div/div[1]/table/tbody/tr[1]/td[2]/p").text
+    real_id = browser.find_element_by_xpath("/html/body/div/div[1]/table/tbody/tr[1]/td[2]/p").text
 
     # overwrite the twitterName by the twitterID
-    dic["twitter_id"] = [result for item in dic["twitter_id"]]
+    for entry in collection["tweets"]:
+        if entry[1] != "TwitterID":
+            entry[1] = real_id
 
     # save the errorcount and errortexts in temp variables
-    errorcount = dic["errors"]["count"]
-    errortexts = dic["errors"]["text"]
-
-    # delete the count an error dictionary entries for output
-    del dic["count"]
-    del dic["errors"]
-
-    # for every entry in the
-    for count in range(len(dic["tweet_id"])):
-        write_list.append([dic[key][count] for key in sorted(dic)])
+    errorcount = collection["errors"]["count"]
+    errortexts = collection["errors"]["text"]
 
     # output as csv
-    write_to_CSV(name, write_list)
+    write_to_CSV(name, collection["tweets"])
 
     # close the current firefox driver instance
     browser.quit()
@@ -168,67 +138,61 @@ def scrape(arg):
             errorlog("\n{0}\n" .format(errortext))
 
 
-def scrape_topsy(browser, set):
+def scrape_topsy(browser, collection):
     """Scrape the browser page_source."""
     # get the whole content of page
     html_source = browser.page_source
 
     # BeautifulSoup find only the media body tag
     soup = BeautifulSoup(html_source)
-    results = soup.find_all("div", class_="media-body")
-
+    results = soup.find_all("div", class_="result-tweet")
     count = 0
     for result in results:
+        count += 1
         try:
-            count += 1
 
-            # find <div> with tweet text in result
-            text = result.find("div")
-            text = tweet_regex(str(text))
+            # navigate to right div and get_text()
+            soup = result.div.div
+            text = soup.div.get_text()
 
             # find <a> with twitter_id and strip ID
-            twitter_id = result.find("a")
-            twitter_id = re.search('(?<=twitter.com/).*?(")', str(twitter_id)).group()
-            twitter_id = twitter_id.replace("\"", "")
+            twitter_id = result.find("a")['href']
+            twitter_id = re.search('(?<=twitter.com/).*', str(twitter_id)).group()
 
-            # search vor <class=muted> in <a>
-            muted = result.find_all("a", class_="muted")
             # try to obtain the reply_to, if not found catch group().. exception and set rep_to = 0
             try:
-                rep_to = re.search('(?<=status/)\d+', str(muted)).group()
+                rep_to = re.search('(?<=in_reply_to=)\d+', str(soup.ul.li.next_sibling)).group()
             except:
                 rep_to = 0
 
+            soup = soup.ul.li.small.a
+
             # find tweet_id and strip ID
-            tweet_id = re.search('(?<=status/)\d+', str(muted)).group()
+            tweet_id = re.search('(?<=status/)\d+', str(soup['href'])).group()
 
             # find date as epoch time and convert to formatted date
-            created_at = re.search('(?<=timestamp=")\d+', str(muted)).group()
+            created_at = soup.span.next_element.next_element['data-timestamp']
             created_at = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(created_at)))
 
             # counts = browse_twitter(browser, result, count)
             counts = [-1, -1]
-
             # save results to the dictionary, append None, or default values if not found
-            set["tweet_id"].add(tweet_id)
-            set["twitter_id"].append(twitter_id)
-            set["created_at"].append(created_at)
-            set["language"].append(None)
-            set["truncated"].append(False)
-            set["source"].append(None)
-            set["coordinates"].append(None)
-            set["reply_user_id"].append(rep_to)
-            set["retweet_count"].append(counts[0])
-            set["favorite_count"].append(counts[1])
-            set["text"].append(text)
-            set["count"] = count
+            tweet = [tweet_id, twitter_id, created_at, None, False, None, None, rep_to, counts[0], counts[1], text]
+
+            for stored_tweet in collection["tweets"]:
+                if tweet[0] in stored_tweet:
+                    raise Exception
+
+            collection["tweets"].append(tweet)
 
         # catch exception of run, store errorcount increment and resulttext in dictionary["errors"]
-        except:
-            set["errors"]["count"] += 1
-            set["errors"]["text"].append(result)
+        except Exception as e:
+            print(e)
+            collection["errors"]["count"] += 1
+            collection["errors"]["text"].append("\n{0}\n{1}" .format(result, tweet))
 
-    return set
+    collection["count"] = count
+    return collection
 
 
 def page_has_loaded(browser, xpath):
