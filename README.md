@@ -52,7 +52,3 @@ This README documents whatever steps are necessary to get your application up an
 
 * Full comments in script
 * ...
-
-### Who do I talk to? ###
-
-* contact@johannroehl.de
